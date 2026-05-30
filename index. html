@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Easy AI Chat</title>
+    <!-- Tailwind CSS for easy design without any setup -->
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 p-5 font-sans h-screen flex flex-col justify-center items-center">
+    
+    <div class="w-full max-w-2xl bg-white p-6 rounded-xl shadow-lg">
+        <h1 class="text-2xl font-bold mb-2 text-center text-indigo-600">Offline No-Setup AI</h1>
+        <p id="status" class="text-xs text-gray-500 mb-4 text-center">Status: Ready. Type a message to load the AI!</p>
+        
+        <div id="chat-box" class="h-96 overflow-y-auto border border-gray-200 rounded p-4 mb-4 bg-gray-50 flex flex-col">
+            <p class="text-center text-gray-400 mt-10">Send your first message to download the model.</p>
+        </div>
+        
+        <div class="flex gap-2">
+            <input type="text" id="userInput" placeholder="Type your message..." class="flex-1 p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+            <button id="sendBtn" class="bg-indigo-600 text-white px-6 py-3 rounded-lg font-bold hover:bg-indigo-700 disabled:opacity-50 transition">Send</button>
+        </div>
+    </div>
+
+    <!-- AI Module directly from browser! No NPM required. -->
+    <script type="module">
+        import { CreateMLCEngine } from "https://esm.run/@mlc.ai/web-llm";
+
+        const chatBox = document.getElementById("chat-box");
+        const userInput = document.getElementById("userInput");
+        const sendBtn = document.getElementById("sendBtn");
+        const statusText = document.getElementById("status");
+
+        let engine = null;
+        let messages = [];
+        let isFirstMessage = true;
+
+        function appendMessage(sender, text, isUser) {
+            if (isFirstMessage) {
+                chatBox.innerHTML = ""; // Clear intro text
+                isFirstMessage = false;
+            }
+            const div = document.createElement("div");
+            div.className = `mb-4 p-3 rounded-lg max-w-[80%] ${isUser ? 'ml-auto bg-indigo-600 text-white' : 'mr-auto bg-gray-200 text-gray-800'}`;
+            div.innerHTML = `<span class="block text-[10px] uppercase font-bold opacity-70 mb-1">${sender}</span>${text}`;
+            chatBox.appendChild(div);
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+
+        sendBtn.onclick = async () => {
+            const text = userInput.value.trim();
+            if (!text) return;
+
+            userInput.value = "";
+            appendMessage("You", text, true);
+            messages.push({ role: "user", content: text });
+            sendBtn.disabled = true;
+
+            // Load AI ONLY on the first message
+            if (!engine) {
+                statusText.innerText = "Status: Downloading AI Model (takes a few minutes, but runs locally forever after)...";
+                try {
+                    engine = await CreateMLCEngine("Phi-3-mini-4k-instruct-q4f16_1-MLC", {
+                        initProgressCallback: (progress) => {
+                            statusText.innerText = `Status: ${progress.text}`;
+                        }
+                    });
+                } catch (e) {
+                    statusText.innerText = "Error: Browser does not support WebGPU.";
+                    return;
+                }
+            }
+
+            statusText.innerText = "Status: AI is typing...";
+            
+            // Get response
+            const reply = await engine.chat.completions.create({ messages });
+            const aiResponse = reply.choices[0].message.content;
+            
+            appendMessage("AI", aiResponse, false);
+            messages.push({ role: "assistant", content: aiResponse });
+            
+            statusText.innerText = "Status: Ready.";
+            sendBtn.disabled = false;
+        };
+
+        // Allow pressing "Enter" to send
+        userInput.addEventListener("keypress", (e) => {
+            if (e.key === "Enter") sendBtn.click();
+        });
+    </script>
+</body>
+</html>
