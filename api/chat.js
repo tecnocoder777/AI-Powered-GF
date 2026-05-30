@@ -1,7 +1,11 @@
 // File: app/api/chat/route.js
 
+// Increase timeout to 60 seconds (max allowed on Vercel Hobby)
+export const maxDuration = 60; 
+// Use Edge runtime for better handling of long external API requests
+export const runtime = 'edge'; 
+
 export async function GET(request) {
-  // Grab the query parameter (e.g., ?prompt=hi)
   const { searchParams } = new URL(request.url);
   const prompt = searchParams.get("prompt");
 
@@ -32,9 +36,10 @@ export async function GET(request) {
         model: "deepseek-v4-pro",
         messages: [
           { "role": "system", "content": "You are a helpful assistant." },
-          { "role": "user", "content": prompt } // Using your URL prompt here
+          { "role": "user", "content": prompt }
         ],
-        thinking: { type: "enabled" },
+        // If it STILL times out after 60 seconds, remove this thinking block
+        thinking: { type: "enabled" }, 
         reasoning_effort: "high",
         stream: false
       })
@@ -49,11 +54,8 @@ export async function GET(request) {
     }
 
     const data = await deepseekResponse.json();
-    
-    // Extract exact text response
     const textOutput = data.choices?.[0]?.message?.content || "No response generated.";
 
-    // Return plain text
     return new Response(textOutput, {
       status: 200,
       headers: {
