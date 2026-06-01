@@ -1,5 +1,4 @@
 {
-  "name": "deepseek-api",
-  "version": "1.0.0",
-  "type": "module"
+  "name": "groq-api",
+  "version": "1.0.0"
 }
