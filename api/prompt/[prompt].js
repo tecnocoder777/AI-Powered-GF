@@ -1,23 +1,15 @@
 export default async function handler(req, res) {
   try {
     const { prompt } = req.query;
-
     const apiKey = req.query.api_key;
     const model = req.query.model || "llama-3.1-8b-instant";
-
-    if (!apiKey) {
-      return res.status(400).json({
-        success: false,
-        error: "Missing api_key"
-      });
-    }
 
     const response = await fetch(
       "https://api.groq.com/openai/v1/chat/completions",
       {
         method: "POST",
         headers: {
-          "Authorization": `Bearer ${apiKey}`,
+          Authorization: `Bearer ${apiKey}`,
           "Content-Type": "application/json"
         },
         body: JSON.stringify({
@@ -34,17 +26,13 @@ export default async function handler(req, res) {
 
     const data = await response.json();
 
-    return res.status(200).json({
-      success: true,
-      model,
-      prompt,
-      response: data.choices?.[0]?.message?.content || ""
-    });
+    const answer =
+      data?.choices?.[0]?.message?.content || "No response";
 
-  } catch (err) {
-    return res.status(500).json({
-      success: false,
-      error: err.message
-    });
+    res.setHeader("Content-Type", "text/plain; charset=utf-8");
+    res.status(200).send(answer);
+
+  } catch (e) {
+    res.status(500).send("Error: " + e.message);
   }
 }
